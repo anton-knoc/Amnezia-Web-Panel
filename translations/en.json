@@ -92,6 +92,8 @@
   "install_protocol": "Install protocol",
   "port_default_hint": "Default port: 55424. Make sure it's not busy",
   "port_xray_hint": "Default port: 443 (recommended for Xray). Make sure it's not taken by another web server.",
+  "subnet_address": "Subnet Address",
+  "subnet_address_hint": "VPN server subnet. The first IP is the gateway (e.g. 10.8.1.1). Clients get IPs starting from .2",
   "reinstall": "Reinstall",
   "uninstall_confirm": "Uninstall {}? All connections and configurations will be lost.",
   "stop_container_confirm": "Stop container {}?",

@@ -2060,6 +2060,7 @@ class InstallProtocolRequest(BaseModel):
     protocol: str = 'awg'
     port: str = '55424'
     install_another: Optional[bool] = False
+    subnet_address: Optional[str] = None
     tls_emulation: Optional[bool] = None
     tls_domain: Optional[str] = None
     max_connections: Optional[int] = None
@@ -3518,7 +3519,7 @@ async def api_install_protocol(request: Request, server_id: int, req: InstallPro
         elif install_base == 'xray':
             result = manager.install_protocol(port=req.port)
         elif install_base == 'wireguard':
-            result = manager.install_protocol(port=req.port)
+            result = manager.install_protocol(port=req.port, subnet_address=req.subnet_address)
         elif install_base == 'socks5':
             result = manager.install_protocol(
                 protocol_type=install_protocol,
@@ -3560,6 +3561,7 @@ async def api_install_protocol(request: Request, server_id: int, req: InstallPro
                 mtu=req.awg_mtu,
                 dns=join_dns(req.awg_dns1, req.awg_dns2),
                 special_junk=awg_special_junk,
+                subnet_address=req.subnet_address,
             )
         else:
             result = manager.install_protocol(install_protocol, port=req.port)

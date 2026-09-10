@@ -742,6 +742,12 @@
                 </div>
             </div>
 
+            <div id="installSubnetGroup" class="form-group" style="display:none;">
+                <label class="form-label">{{ _('subnet_address') }}</label>
+                <input class="form-input" type="text" id="installSubnet" placeholder="10.8.1.0/24">
+                <div class="form-hint" id="installSubnetHint">{{ _('subnet_address_hint') }}</div>
+            </div>
+
             <div id="telemtOptions"
                 style="display:none; padding: var(--space-md); background: rgba(0,0,0,0.03); border-radius: var(--radius-md); margin-bottom: var(--space-md);">
                 <div class="form-group">
@@ -2382,6 +2388,9 @@
         const portInput = document.getElementById('installPort');
         const portLabel = document.getElementById('installPortLabel');
         const portHint = document.getElementById('installPortHint');
+        const subnetGroup = document.getElementById('installSubnetGroup');
+        const subnetInput = document.getElementById('installSubnet');
+        const subnetHint = document.getElementById('installSubnetHint');
         const telemtOpts = document.getElementById('telemtOptions');
         const socks5Opts = document.getElementById('socks5Options');
         const adguardOpts = document.getElementById('adguardOptions');
@@ -2395,6 +2404,7 @@
         nginxOpts.style.display = 'none';
         awgOpts.style.display = 'none';
         exitOpts.style.display = 'none';
+        subnetGroup.style.display = 'none';
 
         if (base === 'dns') {
             portLabel.textContent = _('port') + ' (Internal)';
@@ -2437,7 +2447,16 @@
             portInput.disabled = false;
             portHint.textContent = _('exit_port_hint');
             exitOpts.style.display = 'block';
+        } else if (base === 'wireguard') {
+            portLabel.textContent = _('port') + ' (UDP)';
+            portInput.value = '51820';
+            portInput.disabled = false;
+            portHint.textContent = _('port_default_hint');
+            subnetGroup.style.display = 'block';
+            subnetInput.value = '10.8.2.0/24';
+            subnetHint.textContent = _('subnet_address_hint');
         } else {
+            // awg, awg2, awg_legacy
             portLabel.textContent = _('port') + ' (UDP)';
             portInput.value = currentInstallAnother ? nextSuggestedPort(currentInstallProto, 55424) : '55424';
             portInput.disabled = false;
@@ -2449,6 +2468,9 @@
             document.getElementById('installAwgDns1').value = '1.1.1.1';
             document.getElementById('installAwgDns2').value = '1.0.0.1';
             resetSpecialJunkFields('installAwg');
+            subnetGroup.style.display = 'block';
+            subnetInput.value = '10.8.1.0/24';
+            subnetHint.textContent = _('subnet_address_hint');
         }
 
         document.getElementById('installForm').classList.remove('hidden');
@@ -2504,6 +2526,9 @@
             const params = {
                 protocol: currentInstallProto, port: port, install_another: currentInstallAnother,
             };
+            if (protoBase(currentInstallProto) === 'wireguard') {
+                params.subnet_address = document.getElementById('installSubnet').value || '';
+            }
             if (protoBase(currentInstallProto) === 'telemt') {
                 params.tls_emulation = document.getElementById('installTelemtTls').checked;
                 params.tls_domain = document.getElementById('installTelemtDomain').value;
@@ -2527,6 +2552,7 @@
                 params.exit_subnet = document.getElementById('installExitSubnet').value.trim();
                 params.exit_obfuscation = document.getElementById('installExitObfuscation').checked;
             } else if (AWG_PROTOCOLS.includes(protoBase(currentInstallProto))) {
+                params.subnet_address = document.getElementById('installSubnet').value || '';
                 params.awg_mtu = document.getElementById('installAwgMtu').value.trim();
                 params.awg_dns1 = document.getElementById('installAwgDns1').value.trim();
                 params.awg_dns2 = document.getElementById('installAwgDns2').value.trim();

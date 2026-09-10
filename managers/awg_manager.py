@@ -947,7 +947,7 @@ done
         return info
 
     def install_protocol(self, protocol_type, port=None, awg_params=None,
-                         mtu=None, dns=None, special_junk=None):
+                         mtu=None, dns=None, special_junk=None, subnet_address=None):
         """
         Full installation of AWG or AWG-Legacy protocol.
         Steps: install docker -> prepare host -> build container ->
@@ -1084,7 +1084,7 @@ done
             "No usable IPv6 (host or Docker), tunnel will be IPv4-only"
         )
         self._configure_container(protocol_type, port, awg_params, ipv6=ipv6_enabled,
-                                  mtu=mtu, dns=dns)
+                                  mtu=mtu, dns=dns, subnet_address=subnet_address)
         results.append("AWG configured")
 
         # Step 7: Upload and run start script
@@ -1139,14 +1139,24 @@ done
         )
 
     def _configure_container(self, protocol_type, port, awg_params, ipv6=False,
-                             mtu=None, dns=None):
+                             mtu=None, dns=None, subnet_address=None):
         """Configure the AWG container (generate keys and server config)."""
         container_name = self._container_name(protocol_type)
         wg_bin = self._wg_binary(protocol_type)
         config_path = self._config_path(protocol_type)
 
+        # The user supplies a subnet (e.g. 10.8.5.0/24); the gateway must be its
+        # first usable host, not the network address itself.
         subnet_ip = self._get_subnet_ip(protocol_type)
         subnet_cidr = self._get_subnet_cidr(protocol_type)
+        try:
+            net = ipaddress.ip_network(subnet_address, strict=False)
+            given_ip = subnet_address.split('/')[0]
+            if net.version == 4 and net.prefixlen <= 30:
+                subnet_ip = str(net.network_address + 1) if given_ip == str(net.network_address) else given_ip
+                subnet_cidr = str(net.prefixlen)
+        except (ValueError, TypeError):
+            pass
 
         # AWG 3.1 parameters are written only when the protocol asks for them,
         # so awg/awg2 installations keep byte-identical configs.
