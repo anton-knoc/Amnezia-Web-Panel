@@ -11,6 +11,7 @@ Follows the same architecture as awg_manager.py, using:
 import json
 import re
 import secrets
+import ipaddress
 import logging
 from base64 import b64encode
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
@@ -137,7 +138,7 @@ iptables -C FORWARD -j DOCKER-USER 2>/dev/null || iptables -A FORWARD -j DOCKER-
         self.ssh.run_sudo_script(script)
         return True
 
-    def install_protocol(self, port=None):
+    def install_protocol(self, port=None, subnet_address=None):
         """
         Full installation of WireGuard protocol.
         Steps: install docker -> prepare host -> build container ->
@@ -224,7 +225,7 @@ iptables -C FORWARD -j DOCKER-USER 2>/dev/null || iptables -A FORWARD -j DOCKER-
 
         # Step 6: Configure container
         results.append("Configuring WireGuard...")
-        self._configure_container(port)
+        self._configure_container(port, subnet_address)
         results.append("WireGuard configured")
 
         # Step 7: Upload start script
@@ -266,10 +267,20 @@ iptables -C FORWARD -j DOCKER-USER 2>/dev/null || iptables -A FORWARD -j DOCKER-
             f"(status: {last_status}). Logs:\n{logs_out}"
         )
 
-    def _configure_container(self, port):
+    def _configure_container(self, port, subnet_address=None):
         """Configure the WireGuard container (generate keys and server config)."""
+        # The user supplies a subnet (e.g. 10.8.5.0/24); the gateway must be its
+        # first usable host, not the network address itself.
         subnet_ip = WG_DEFAULTS['subnet_ip']
         subnet_cidr = WG_DEFAULTS['subnet_cidr']
+        try:
+            net = ipaddress.ip_network(subnet_address, strict=False)
+            given_ip = subnet_address.split('/')[0]
+            if net.version == 4 and net.prefixlen <= 30:
+                subnet_ip = str(net.network_address + 1) if given_ip == str(net.network_address) else given_ip
+                subnet_cidr = str(net.prefixlen)
+        except (ValueError, TypeError):
+            pass
 
         config_script = f"""
 mkdir -p {self.KEY_DIR}

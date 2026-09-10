@@ -399,6 +399,12 @@
                 <div class="form-hint" id="installPortHint">{{ _('port_default_hint') }}</div>
             </div>
 
+            <div id="installSubnetGroup" class="form-group" style="display:none;">
+                <label class="form-label">{{ _('subnet_address') }}</label>
+                <input class="form-input" type="text" id="installSubnet" placeholder="10.8.1.0/24">
+                <div class="form-hint" id="installSubnetHint">{{ _('subnet_address_hint') }}</div>
+            </div>
+
             <div id="telemtOptions"
                 style="display:none; padding: var(--space-md); background: rgba(0,0,0,0.03); border-radius: var(--radius-md); margin-bottom: var(--space-md);">
                 <div class="form-group">
@@ -1075,6 +1081,9 @@
         const portInput = document.getElementById('installPort');
         const portLabel = document.getElementById('installPortLabel');
         const portHint = document.getElementById('installPortHint');
+        const subnetGroup = document.getElementById('installSubnetGroup');
+        const subnetInput = document.getElementById('installSubnet');
+        const subnetHint = document.getElementById('installSubnetHint');
         const telemtOpts = document.getElementById('telemtOptions');
         const socks5Opts = document.getElementById('socks5Options');
         const adguardOpts = document.getElementById('adguardOptions');
@@ -1082,6 +1091,7 @@
         telemtOpts.style.display = 'none';
         socks5Opts.style.display = 'none';
         adguardOpts.style.display = 'none';
+        subnetGroup.style.display = 'none';
 
         if (proto === 'dns') {
             portLabel.textContent = _('port') + ' (Internal)';
@@ -1111,11 +1121,23 @@
             portInput.disabled = false;
             portHint.textContent = _('adguard_dns_port_hint');
             adguardOpts.style.display = 'block';
+        } else if (proto === 'wireguard') {
+            portLabel.textContent = _('port') + ' (UDP)';
+            portInput.value = '51820';
+            portInput.disabled = false;
+            portHint.textContent = _('port_default_hint');
+            subnetGroup.style.display = 'block';
+            subnetInput.value = '10.8.2.0/24';
+            subnetHint.textContent = _('subnet_address_hint');
         } else {
+            // awg, awg2, awg_legacy
             portLabel.textContent = _('port') + ' (UDP)';
             portInput.value = '55424';
             portInput.disabled = false;
             portHint.textContent = _('port_default_hint');
+            subnetGroup.style.display = 'block';
+            subnetInput.value = '10.8.1.0/24';
+            subnetHint.textContent = _('subnet_address_hint');
         }
 
         document.getElementById('installForm').classList.remove('hidden');
@@ -1158,6 +1180,9 @@
             const params = {
                 protocol: currentInstallProto, port: port,
             };
+            if (['awg', 'awg2', 'awg_legacy', 'wireguard'].includes(currentInstallProto)) {
+                params.subnet_address = document.getElementById('installSubnet').value || '';
+            }
             if (currentInstallProto === 'telemt') {
                 params.tls_emulation = document.getElementById('installTelemtTls').checked;
                 params.tls_domain = document.getElementById('installTelemtDomain').value;

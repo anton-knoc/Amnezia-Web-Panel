@@ -13,6 +13,7 @@ import os
 import secrets
 import struct
 import hashlib
+import ipaddress
 import logging
 import re
 from base64 import b64encode, b64decode
@@ -304,7 +305,7 @@ iptables -C FORWARD -j DOCKER-USER 2>/dev/null || iptables -A FORWARD -j DOCKER-
         self.ssh.run_sudo_script(script)
         return True
 
-    def install_protocol(self, protocol_type, port=None, awg_params=None):
+    def install_protocol(self, protocol_type, port=None, awg_params=None, subnet_address=None):
         """
         Full installation of AWG or AWG-Legacy protocol.
         Steps: install docker -> prepare host -> build container ->
@@ -402,7 +403,7 @@ iptables -C FORWARD -j DOCKER-USER 2>/dev/null || iptables -A FORWARD -j DOCKER-
 
         # Step 6: Configure container (generate server keys and config)
         results.append("Configuring AWG...")
-        self._configure_container(protocol_type, port, awg_params)
+        self._configure_container(protocol_type, port, awg_params, subnet_address)
         results.append("AWG configured")
 
         # Step 7: Upload and run start script
@@ -448,14 +449,24 @@ iptables -C FORWARD -j DOCKER-USER 2>/dev/null || iptables -A FORWARD -j DOCKER-
             f"(status: {last_status}). Logs:\n{logs_out}"
         )
 
-    def _configure_container(self, protocol_type, port, awg_params):
+    def _configure_container(self, protocol_type, port, awg_params, subnet_address=None):
         """Configure the AWG container (generate keys and server config)."""
         container_name = self._container_name(protocol_type)
         wg_bin = self._wg_binary(protocol_type)
         config_path = self._config_path(protocol_type)
 
+        # The user supplies a subnet (e.g. 10.8.5.0/24); the gateway must be its
+        # first usable host, not the network address itself.
         subnet_ip = self._get_subnet_ip(protocol_type)
         subnet_cidr = self._get_subnet_cidr(protocol_type)
+        try:
+            net = ipaddress.ip_network(subnet_address, strict=False)
+            given_ip = subnet_address.split('/')[0]
+            if net.version == 4 and net.prefixlen <= 30:
+                subnet_ip = str(net.network_address + 1) if given_ip == str(net.network_address) else given_ip
+                subnet_cidr = str(net.prefixlen)
+        except (ValueError, TypeError):
+            pass
 
         # Build the server config generation script
         if protocol_type in (self.AWG, self.AWG2):

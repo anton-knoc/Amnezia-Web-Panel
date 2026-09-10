@@ -1186,6 +1186,7 @@ class ReorderServersRequest(BaseModel):
 class InstallProtocolRequest(BaseModel):
     protocol: str = 'awg'
     port: str = '55424'
+    subnet_address: Optional[str] = None
     tls_emulation: Optional[bool] = None
     tls_domain: Optional[str] = None
     max_connections: Optional[int] = None
@@ -2122,7 +2123,7 @@ async def api_install_protocol(request: Request, server_id: int, req: InstallPro
         elif req.protocol == 'xray':
             result = manager.install_protocol(port=req.port)
         elif req.protocol == 'wireguard':
-            result = manager.install_protocol(port=req.port)
+            result = manager.install_protocol(port=req.port, subnet_address=req.subnet_address)
         elif req.protocol == 'socks5':
             result = manager.install_protocol(
                 protocol_type='socks5',
@@ -2144,7 +2145,7 @@ async def api_install_protocol(request: Request, server_id: int, req: InstallPro
                 expose_doh=bool(req.adguard_expose_doh),
             )
         else:
-            result = manager.install_protocol(req.protocol, port=req.port)
+            result = manager.install_protocol(req.protocol, port=req.port, subnet_address=req.subnet_address)
 
         proto_record = {
             'installed': True,
